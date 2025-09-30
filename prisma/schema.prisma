@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Video {
+  id               String   @id @default(uuid())
+  originalFilename String   @map("original_filename")
+  filePath         String   @map("file_path")
+  fileSize         BigInt   @map("file_size")
+  mimeType         String   @map("mime_type")
+  duration         Float?
+  status           String   @default("pending")
+  errorMessage     String?  @map("error_message")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  
+  transcodedVideos TranscodedVideo[]
+
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+  @@map("videos")
+}
+
+model TranscodedVideo {
+  id         String   @id @default(uuid())
+  videoId    String   @map("video_id")
+  resolution String
+  filePath   String   @map("file_path")
+  fileSize   BigInt   @map("file_size")
+  bitrate    Int?
+  codec      String?
+  status     String   @default("pending")
+  createdAt  DateTime @default(now()) @map("created_at")
+  
+  video      Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, resolution])
+  @@index([videoId])
+  @@index([status])
+  @@map("transcoded_videos")
+}
