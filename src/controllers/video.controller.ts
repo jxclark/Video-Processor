@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/database';
 import fs from 'fs';
+import { TranscodeService } from '../services/transcode.service';
 
 export class VideoController {
   // Upload video
@@ -24,8 +25,14 @@ export class VideoController {
         }
       });
 
+      // Start transcoding asynchronously (don't wait for it)
+      TranscodeService.transcodeToMultipleResolutions(video.id, filePath)
+        .catch(error => {
+          console.error('Transcoding error:', error);
+        });
+
       res.status(201).json({
-        message: 'Video uploaded successfully',
+        message: 'Video uploaded successfully and transcoding started',
         video: {
           id: video.id,
           originalFilename: video.originalFilename,
