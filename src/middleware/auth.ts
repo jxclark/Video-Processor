@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/database';
 import { isValidApiKeyFormat } from '../utils/apiKey';
+import { UsageService } from '../services/usage.service';
 
 // Extend Express Request to include organization
 declare global {
@@ -74,6 +75,9 @@ export const authenticateApiKey = async (
       where: { id: keyRecord.id },
       data: { lastUsedAt: new Date() }
     });
+
+    // Track API call
+    await UsageService.trackApiCall(keyRecord.organizationId);
 
     // Attach organization ID to request
     req.organizationId = keyRecord.organizationId;

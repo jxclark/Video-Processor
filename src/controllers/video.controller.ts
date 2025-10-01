@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/database';
 import fs from 'fs';
 import { TranscodeService } from '../services/transcode.service';
+import { UsageService } from '../services/usage.service';
 
 export class VideoController {
   // Upload video
@@ -19,6 +20,27 @@ export class VideoController {
 
       const { originalname, filename, path: filePath, size, mimetype } = req.file;
 
+      // Check quota limits
+      const canUpload = await UsageService.canUploadVideo(req.organizationId);
+      if (!canUpload.allowed) {
+        // Delete uploaded file since we're rejecting it
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+        res.status(429).json({ error: canUpload.reason });
+        return;
+      }
+
+      const hasStorage = await UsageService.hasStorageCapacity(req.organizationId, size);
+      if (!hasStorage.allowed) {
+        // Delete uploaded file since we're rejecting it
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+        res.status(429).json({ error: hasStorage.reason });
+        return;
+      }
+
       // Create video record in database with organization
       const video = await prisma.video.create({
         data: {
@@ -30,6 +52,9 @@ export class VideoController {
           status: 'pending'
         }
       });
+
+      // Track usage
+      await UsageService.trackVideoUpload(req.organizationId, BigInt(size));
 
       // Start transcoding asynchronously (don't wait for it)
       TranscodeService.transcodeToMultipleResolutions(video.id, filePath)
@@ -151,6 +176,12 @@ export class VideoController {
         return;
       }
 
+      // Calculate total storage to free
+      let totalSize = video.fileSize;
+      for (const transcoded of video.transcodedVideos) {
+        totalSize += transcoded.fileSize;
+      }
+
       // Delete original file
       if (fs.existsSync(video.filePath)) {
         fs.unlinkSync(video.filePath);
@@ -165,6 +196,9 @@ export class VideoController {
 
       // Delete from database (cascade will delete transcoded videos)
       await prisma.video.delete({ where: { id } });
+
+      // Track storage reduction
+      await UsageService.trackVideoDeletion(req.organizationId, totalSize);
 
       res.json({ message: 'Video deleted successfully' });
     } catch (error) {

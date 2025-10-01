@@ -2,6 +2,7 @@ import ffmpeg from 'fluent-ffmpeg';
 import path from 'path';
 import fs from 'fs';
 import prisma from '../config/database';
+import { UsageService } from './usage.service';
 
 // Ensure output directory exists
 const outputDir = process.env.OUTPUT_DIR || './outputs';
@@ -160,6 +161,18 @@ export class TranscodeService {
         where: { id: videoId },
         data: { duration }
       });
+
+      // Get video to access organizationId
+      const video = await prisma.video.findUnique({
+        where: { id: videoId }
+      });
+
+      if (!video) {
+        throw new Error('Video not found');
+      }
+
+      // Track minutes processed
+      await UsageService.trackVideoUpload(video.organizationId, BigInt(0), duration);
 
       // Transcode to both resolutions
       const resolutions: Array<'720p' | '1080p'> = ['720p', '1080p'];
