@@ -1,3 +1,11 @@
 node_modules
 # Keep environment variables out of version control
 .env
+
+# Ignore everything inside the folder
+/uploads/*
+/outputs/*
+
+# But don't ignore the .gitkeep file
+!/uploads/.gitkeep
+!/outputs/.gitkeep
