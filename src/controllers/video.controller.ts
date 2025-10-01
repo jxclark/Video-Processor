@@ -12,11 +12,17 @@ export class VideoController {
         return;
       }
 
+      if (!req.organizationId) {
+        res.status(401).json({ error: 'Organization not authenticated' });
+        return;
+      }
+
       const { originalname, filename, path: filePath, size, mimetype } = req.file;
 
-      // Create video record in database
+      // Create video record in database with organization
       const video = await prisma.video.create({
         data: {
+          organizationId: req.organizationId,
           originalFilename: originalname,
           filePath: filePath,
           fileSize: BigInt(size),
@@ -49,7 +55,14 @@ export class VideoController {
   // Get all videos
   static async getAllVideos(req: Request, res: Response): Promise<void> {
     try {
+      if (!req.organizationId) {
+        res.status(401).json({ error: 'Organization not authenticated' });
+        return;
+      }
+
+      // Only get videos for this organization
       const videos = await prisma.video.findMany({
+        where: { organizationId: req.organizationId },
         orderBy: { createdAt: 'desc' },
         include: {
           transcodedVideos: true
@@ -76,10 +89,18 @@ export class VideoController {
   // Get video by ID
   static async getVideoById(req: Request, res: Response): Promise<void> {
     try {
+      if (!req.organizationId) {
+        res.status(401).json({ error: 'Organization not authenticated' });
+        return;
+      }
+
       const { id } = req.params;
 
-      const video = await prisma.video.findUnique({
-        where: { id },
+      const video = await prisma.video.findFirst({
+        where: { 
+          id,
+          organizationId: req.organizationId // Ensure video belongs to this org
+        },
         include: {
           transcodedVideos: true
         }
@@ -110,10 +131,18 @@ export class VideoController {
   // Delete video
   static async deleteVideo(req: Request, res: Response): Promise<void> {
     try {
+      if (!req.organizationId) {
+        res.status(401).json({ error: 'Organization not authenticated' });
+        return;
+      }
+
       const { id } = req.params;
 
-      const video = await prisma.video.findUnique({
-        where: { id },
+      const video = await prisma.video.findFirst({
+        where: { 
+          id,
+          organizationId: req.organizationId // Ensure video belongs to this org
+        },
         include: { transcodedVideos: true }
       });
 
