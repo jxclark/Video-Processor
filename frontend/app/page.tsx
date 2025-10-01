@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import UploadSection from '@/components/UploadSection';
 import VideoList from '@/components/VideoList';
+import UsageStats from '@/components/UsageStats';
 import { videoApi } from '@/services/api';
 
 interface TranscodedVideo {
@@ -23,10 +24,28 @@ interface Video {
   transcodedVideos: TranscodedVideo[];
 }
 
+interface UsageData {
+  current: {
+    videosUploaded: number;
+    minutesProcessed: number;
+    storageUsedGB: number;
+    apiCalls: number;
+  };
+  limits: {
+    videosPerMonth: number;
+    minutesPerMonth: number;
+    storageGB: number;
+    apiCallsPerMonth: number;
+  };
+  plan: string;
+  month: string;
+}
+
 export default function Dashboard() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [usageStats, setUsageStats] = useState<UsageData | null>(null);
 
   // Fetch videos
   const fetchVideos = async () => {
@@ -40,10 +59,24 @@ export default function Dashboard() {
     }
   };
 
+  // Fetch usage stats
+  const fetchUsageStats = async () => {
+    try {
+      const data = await videoApi.getUsageStats();
+      setUsageStats(data);
+    } catch (error) {
+      console.error('Error fetching usage stats:', error);
+    }
+  };
+
   useEffect(() => {
     fetchVideos();
+    fetchUsageStats();
     // Poll every 5 seconds to check for status updates
-    const interval = setInterval(fetchVideos, 5000);
+    const interval = setInterval(() => {
+      fetchVideos();
+      fetchUsageStats();
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -79,6 +112,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
+      {usageStats && <UsageStats stats={usageStats} />}
       <UploadSection onUpload={handleUpload} uploading={uploading} />
       <VideoList videos={videos} loading={loading} onDelete={handleDelete} />
     </div>

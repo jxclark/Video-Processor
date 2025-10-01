@@ -31,4 +31,10 @@ export const videoApi = {
     const response = await axios.get(`${API_URL}/api/videos/${id}`);
     return response.data.video;
   },
+
+  // Get usage statistics
+  getUsageStats: async () => {
+    const response = await axios.get(`${API_URL}/api/usage/stats`);
+    return response.data;
+  },
 };

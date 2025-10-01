@@ -1,4 +1,7 @@
 node_modules
+/frontend/node_modules
+/frontend/.next
+
 # Keep environment variables out of version control
 .env
 
@@ -9,3 +12,4 @@ node_modules
 # But don't ignore the .gitkeep file
 !/uploads/.gitkeep
 !/outputs/.gitkeep
+
