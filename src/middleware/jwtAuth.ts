@@ -8,6 +8,7 @@ declare global {
   namespace Express {
     interface Request {
       userId?: string;
+      organizationId?: string;
       userRole?: string;
     }
   }
