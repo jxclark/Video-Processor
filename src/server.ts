@@ -2,7 +2,9 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import prisma from './config/database';
+import authRoutes from './routes/auth.routes';
 import videoRoutes from './routes/video.routes';
+import usageRoutes from './routes/usage.routes';
 
 dotenv.config();
 
@@ -30,7 +32,9 @@ app.get('/db-test', async (req, res) => {
 });
 
 // API Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/videos', videoRoutes);
+app.use('/api/usage', usageRoutes);
 
 // Start server
 app.listen(PORT, () => {
