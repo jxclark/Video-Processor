@@ -7,20 +7,73 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Video {
-  id               String   @id @default(uuid())
-  originalFilename String   @map("original_filename")
-  filePath         String   @map("file_path")
-  fileSize         BigInt   @map("file_size")
-  mimeType         String   @map("mime_type")
-  duration         Float?
-  status           String   @default("pending")
-  errorMessage     String?  @map("error_message")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+model Organization {
+  id          String   @id @default(uuid())
+  name        String
+  email       String   @unique
+  plan        String   @default("free") // free, starter, pro, enterprise
+  status      String   @default("active") // active, suspended, cancelled
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
   
+  users       User[]
+  apiKeys     ApiKey[]
+  videos      Video[]
+  usage       Usage[]
+
+  @@map("organizations")
+}
+
+model User {
+  id             String       @id @default(uuid())
+  email          String       @unique
+  name           String
+  passwordHash   String       @map("password_hash")
+  role           String       @default("member") // owner, admin, member
+  organizationId String       @map("organization_id")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("users")
+}
+
+model ApiKey {
+  id             String       @id @default(uuid())
+  name           String
+  key            String       @unique
+  organizationId String       @map("organization_id")
+  permissions    String[]     @default(["video:read", "video:write"])
+  isActive       Boolean      @default(true) @map("is_active")
+  lastUsedAt     DateTime?    @map("last_used_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([key])
+  @@map("api_keys")
+}
+
+model Video {
+  id               String       @id @default(uuid())
+  organizationId   String       @map("organization_id")
+  originalFilename String       @map("original_filename")
+  filePath         String       @map("file_path")
+  fileSize         BigInt       @map("file_size")
+  mimeType         String       @map("mime_type")
+  duration         Float?
+  status           String       @default("pending")
+  errorMessage     String?      @map("error_message")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+  
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   transcodedVideos TranscodedVideo[]
 
+  @@index([organizationId])
   @@index([status])
   @@index([createdAt(sort: Desc)])
   @@map("videos")
@@ -43,4 +96,22 @@ model TranscodedVideo {
   @@index([videoId])
   @@index([status])
   @@map("transcoded_videos")
+}
+
+model Usage {
+  id             String       @id @default(uuid())
+  organizationId String       @map("organization_id")
+  month          String       // Format: YYYY-MM
+  videosUploaded Int          @default(0) @map("videos_uploaded")
+  minutesProcessed Float      @default(0) @map("minutes_processed")
+  storageUsed    BigInt       @default(0) @map("storage_used") // in bytes
+  apiCalls       Int          @default(0) @map("api_calls")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, month])
+  @@index([organizationId])
+  @@map("usage")
 }

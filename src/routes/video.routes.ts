@@ -1,19 +1,23 @@
 import { Router } from 'express';
 import { VideoController } from '../controllers/video.controller';
 import upload from '../middleware/upload';
+import { authenticateApiKey, requirePermission } from '../middleware/auth';
 
 const router = Router();
 
-// Upload video
-router.post('/upload', upload.single('video'), VideoController.uploadVideo);
+// All routes require API key authentication
+router.use(authenticateApiKey);
 
-// Get all videos
-router.get('/', VideoController.getAllVideos);
+// Upload video (requires video:write permission)
+router.post('/upload', requirePermission('video:write'), upload.single('video'), VideoController.uploadVideo);
 
-// Get video by ID
-router.get('/:id', VideoController.getVideoById);
+// Get all videos (requires video:read permission)
+router.get('/', requirePermission('video:read'), VideoController.getAllVideos);
 
-// Delete video
-router.delete('/:id', VideoController.deleteVideo);
+// Get video by ID (requires video:read permission)
+router.get('/:id', requirePermission('video:read'), VideoController.getVideoById);
+
+// Delete video (requires video:write permission)
+router.delete('/:id', requirePermission('video:write'), VideoController.deleteVideo);
 
 export default router;
