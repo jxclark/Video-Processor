@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { UsageController } from '../controllers/usage.controller';
-import { authenticateApiKey } from '../middleware/auth';
+import { authenticateJWT } from '../middleware/jwtAuth';
 
 const router = Router();
 
-// All routes require API key authentication
-router.use(authenticateApiKey);
+// All routes require JWT authentication
+router.use(authenticateJWT);
 
 // Get usage statistics
 router.get('/stats', UsageController.getUsageStats);
