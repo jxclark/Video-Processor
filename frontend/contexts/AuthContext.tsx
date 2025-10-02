@@ -75,7 +75,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('user', JSON.stringify(data.user));
       localStorage.setItem('organization', JSON.stringify(data.organization));
 
-      router.push('/dashboard');
+      // Use replace to prevent back button from going to login
+      router.replace('/dashboard');
     } catch (error) {
       console.error('Login error:', error);
       throw error;
