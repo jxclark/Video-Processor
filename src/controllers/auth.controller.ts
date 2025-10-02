@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/database';
 import { generateApiKey } from '../utils/apiKey';
+import { AuditService } from '../services/audit.service';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
 const SALT_ROUNDS = 10;
@@ -138,6 +139,22 @@ export class AuthController {
         res.status(403).json({ error: 'Organization account is not active' });
         return;
       }
+
+      // Update last login
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date() }
+      });
+
+      // Log login event
+      await AuditService.log({
+        organizationId: user.organizationId,
+        userId: user.id,
+        action: 'user.login',
+        resourceType: 'user',
+        resourceId: user.id,
+        req
+      });
 
       // Generate JWT token
       const token = jwt.sign(

@@ -25,18 +25,26 @@ model Organization {
 }
 
 model User {
-  id             String       @id @default(uuid())
-  email          String       @unique
-  name           String
-  passwordHash   String       @map("password_hash")
-  role           String       @default("member") // owner, admin, member
-  organizationId String       @map("organization_id")
-  createdAt      DateTime     @default(now()) @map("created_at")
-  updatedAt      DateTime     @updatedAt @map("updated_at")
+  id                String       @id @default(uuid())
+  email             String       @unique
+  name              String
+  passwordHash      String       @map("password_hash")
+  role              String       @default("member") // owner, admin, member, viewer
+  organizationId    String       @map("organization_id")
+  isEmailVerified   Boolean      @default(false) @map("is_email_verified")
+  emailVerifyToken  String?      @map("email_verify_token")
+  resetPasswordToken String?     @map("reset_password_token")
+  resetPasswordExpires DateTime? @map("reset_password_expires")
+  lastLoginAt       DateTime?    @map("last_login_at")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
   
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy         TeamInvite[] @relation("InvitedByUser")
+  auditLogs         AuditLog[]
 
   @@index([organizationId])
+  @@index([email])
   @@map("users")
 }
 
@@ -114,4 +122,44 @@ model Usage {
   @@unique([organizationId, month])
   @@index([organizationId])
   @@map("usage")
+}
+
+model TeamInvite {
+  id             String       @id @default(uuid())
+  organizationId String       @map("organization_id")
+  email          String
+  role           String       // admin, member, viewer
+  invitedById    String       @map("invited_by_id")
+  token          String       @unique
+  status         String       @default("pending") // pending, accepted, expired
+  expiresAt      DateTime     @map("expires_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  
+  invitedBy      User         @relation("InvitedByUser", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, email])
+  @@index([token])
+  @@index([organizationId])
+  @@map("team_invites")
+}
+
+model AuditLog {
+  id             String       @id @default(uuid())
+  organizationId String       @map("organization_id")
+  userId         String?      @map("user_id")
+  action         String       // user.login, user.invite, apikey.create, video.upload, etc.
+  resourceType   String?      @map("resource_type") // user, apikey, video, organization
+  resourceId     String?      @map("resource_id")
+  ipAddress      String?      @map("ip_address")
+  userAgent      String?      @map("user_agent")
+  metadata       Json?        // Additional context
+  createdAt      DateTime     @default(now()) @map("created_at")
+  
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt(sort: Desc)])
+  @@map("audit_logs")
 }
