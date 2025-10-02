@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.routes';
 import accountRoutes from './routes/account.routes';
 import apiKeyRoutes from './routes/apiKey.routes';
 import teamRoutes from './routes/team.routes';
+import billingRoutes from './routes/billing.routes';
 import videoRoutes from './routes/video.routes';
 import usageRoutes from './routes/usage.routes';
 
@@ -39,6 +40,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/account', accountRoutes);
 app.use('/api/keys', apiKeyRoutes);
 app.use('/api/team', teamRoutes);
+app.use('/api/billing', billingRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/usage', usageRoutes);
 
