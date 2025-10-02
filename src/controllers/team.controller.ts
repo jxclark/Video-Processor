@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import crypto from 'crypto';
 import prisma from '../config/database';
 import { AuditService } from '../services/audit.service';
+import { EmailService } from '../services/email.service';
 
 export class TeamController {
   /**
@@ -92,6 +93,17 @@ export class TeamController {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
 
+      // Get inviter and organization info
+      const inviter = await prisma.user.findUnique({
+        where: { id: req.userId },
+        include: { organization: true }
+      });
+
+      if (!inviter) {
+        res.status(404).json({ error: 'Inviter not found' });
+        return;
+      }
+
       // Create invite
       const invite = await prisma.teamInvite.create({
         data: {
@@ -115,9 +127,16 @@ export class TeamController {
         req
       });
 
-      // TODO: Send email with invite link
-      // For now, return the token (in production, send via email)
-      const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3001'}/accept-invite?token=${token}`;
+      // Send invite email (don't wait for it)
+      EmailService.sendTeamInviteEmail(
+        email,
+        inviter.name,
+        inviter.organization.name,
+        role,
+        token
+      ).catch(err => {
+        console.error('Failed to send invite email:', err);
+      });
 
       res.status(201).json({
         message: 'Team member invited successfully',
@@ -126,8 +145,7 @@ export class TeamController {
           email: invite.email,
           role: invite.role,
           expiresAt: invite.expiresAt
-        },
-        inviteLink // Remove this in production
+        }
       });
     } catch (error) {
       console.error('Invite team member error:', error);

@@ -1,18 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Mail } from 'lucide-react';
 
 export default function SignupPage() {
+  const router = useRouter();
   const [organizationName, setOrganizationName] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signup } = useAuth();
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,13 +21,62 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      await signup(organizationName, email, password, name);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organizationName, email, password, name })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Signup failed');
+      }
+
+      // Show success message
+      setSuccess(true);
+      
+      // Redirect to login after 5 seconds
+      setTimeout(() => {
+        router.push('/login');
+      }, 5000);
     } catch (err: any) {
       setError(err.message || 'Signup failed');
     } finally {
       setLoading(false);
     }
   };
+
+  if (success) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div className="text-center">
+            <div className="flex justify-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                <Mail className="w-10 h-10 text-green-600" />
+              </div>
+            </div>
+            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">Check your email!</h2>
+            <p className="mt-2 text-gray-600">
+              We've sent a verification link to <strong>{email}</strong>
+            </p>
+            <p className="mt-4 text-sm text-gray-500">
+              Please verify your email before logging in. Redirecting to login in 5 seconds...
+            </p>
+            <div className="mt-6">
+              <Link
+                href="/login"
+                className="text-primary-600 hover:text-primary-500 font-medium"
+              >
+                Go to login now
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
