@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import prisma from './config/database';
 import authRoutes from './routes/auth.routes';
+import accountRoutes from './routes/account.routes';
 import apiKeyRoutes from './routes/apiKey.routes';
 import teamRoutes from './routes/team.routes';
 import videoRoutes from './routes/video.routes';
@@ -35,6 +36,7 @@ app.get('/db-test', async (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/account', accountRoutes);
 app.use('/api/keys', apiKeyRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/videos', videoRoutes);
