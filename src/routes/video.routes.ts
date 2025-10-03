@@ -20,4 +20,13 @@ router.get('/:id', VideoController.getVideoById);
 // Delete video
 router.delete('/:id', VideoController.deleteVideo);
 
+// Stream video (HLS playlist)
+router.get('/:id/stream', VideoController.streamVideo);
+
+// Get video thumbnail
+router.get('/:id/thumbnail', VideoController.getThumbnail);
+
+// Download video
+router.get('/:id/download', VideoController.downloadVideo);
+
 export default router;
