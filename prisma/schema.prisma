@@ -75,6 +75,10 @@ model Video {
   fileSize         BigInt       @map("file_size")
   mimeType         String       @map("mime_type")
   duration         Float?
+  width            Int?
+  height           Int?
+  thumbnailPath    String?      @map("thumbnail_path")
+  hlsPlaylistPath  String?      @map("hls_playlist_path")
   status           String       @default("pending")
   errorMessage     String?      @map("error_message")
   createdAt        DateTime     @default(now()) @map("created_at")

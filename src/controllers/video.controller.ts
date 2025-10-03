@@ -1,10 +1,48 @@
 import { Request, Response } from 'express';
 import prisma from '../config/database';
 import fs from 'fs';
+import path from 'path';
 import { TranscodeService } from '../services/transcode.service';
 import { UsageService } from '../services/usage.service';
+import { StreamingService } from '../services/streaming.service';
 
 export class VideoController {
+  // Process video: Generate thumbnail, HLS, and transcode
+  private static async processVideo(videoId: string, filePath: string): Promise<void> {
+    try {
+      // Generate thumbnail
+      const thumbnailPath = await StreamingService.generateThumbnail(videoId, filePath);
+      
+      // Get video metadata
+      const metadata = await StreamingService.getVideoMetadata(filePath);
+      
+      // Generate HLS playlist (optional - can be heavy)
+      // const hlsPath = await StreamingService.generateHLS(videoId, filePath);
+      
+      // Update video with streaming info
+      await StreamingService.updateVideoStreamingInfo(
+        videoId,
+        '', // hlsPath - empty for now
+        thumbnailPath,
+        metadata
+      );
+      
+      // Start transcoding
+      await TranscodeService.transcodeToMultipleResolutions(videoId, filePath);
+      
+    } catch (error: any) {
+      console.error('Process video error:', error);
+      // Update video status to error
+      await prisma.video.update({
+        where: { id: videoId },
+        data: {
+          status: 'error',
+          errorMessage: error.message
+        }
+      });
+    }
+  }
+
   // Upload video
   static async uploadVideo(req: Request, res: Response): Promise<void> {
     try {
@@ -56,11 +94,10 @@ export class VideoController {
       // Track usage
       await UsageService.trackVideoUpload(req.organizationId, BigInt(size));
 
-      // Start transcoding asynchronously (don't wait for it)
-      TranscodeService.transcodeToMultipleResolutions(video.id, filePath)
-        .catch(error => {
-          console.error('Transcoding error:', error);
-        });
+      // Start processing asynchronously (transcoding + thumbnail + HLS)
+      this.processVideo(video.id, filePath).catch(error => {
+        console.error('Video processing error:', error);
+      });
 
       res.status(201).json({
         message: 'Video uploaded successfully and transcoding started',
@@ -204,6 +241,147 @@ export class VideoController {
     } catch (error) {
       console.error('Delete video error:', error);
       res.status(500).json({ error: 'Failed to delete video' });
+    }
+  }
+
+  // Stream video (serve HLS playlist or video file)
+  static async streamVideo(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.organizationId) {
+        res.status(401).json({ error: 'Organization not authenticated' });
+        return;
+      }
+
+      const { id } = req.params;
+
+      const video = await prisma.video.findFirst({
+        where: { 
+          id,
+          organizationId: req.organizationId
+        }
+      });
+
+      if (!video) {
+        res.status(404).json({ error: 'Video not found' });
+        return;
+      }
+
+      // If HLS playlist exists, serve it
+      if (video.hlsPlaylistPath && fs.existsSync(video.hlsPlaylistPath)) {
+        res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+        res.sendFile(path.resolve(video.hlsPlaylistPath));
+        return;
+      }
+
+      // Otherwise, serve original video file with range support
+      const videoPath = video.filePath;
+      if (!fs.existsSync(videoPath)) {
+        res.status(404).json({ error: 'Video file not found' });
+        return;
+      }
+
+      const stat = fs.statSync(videoPath);
+      const fileSize = stat.size;
+      const range = req.headers.range;
+
+      if (range) {
+        // Parse range header
+        const parts = range.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+        const chunksize = (end - start) + 1;
+        const file = fs.createReadStream(videoPath, { start, end });
+        const head = {
+          'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunksize,
+          'Content-Type': video.mimeType || 'video/mp4',
+        };
+        res.writeHead(206, head);
+        file.pipe(res);
+      } else {
+        // No range, send entire file
+        const head = {
+          'Content-Length': fileSize,
+          'Content-Type': video.mimeType || 'video/mp4',
+        };
+        res.writeHead(200, head);
+        fs.createReadStream(videoPath).pipe(res);
+      }
+    } catch (error) {
+      console.error('Stream video error:', error);
+      res.status(500).json({ error: 'Failed to stream video' });
+    }
+  }
+
+  // Get video thumbnail
+  static async getThumbnail(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.organizationId) {
+        res.status(401).json({ error: 'Organization not authenticated' });
+        return;
+      }
+
+      const { id } = req.params;
+
+      const video = await prisma.video.findFirst({
+        where: { 
+          id,
+          organizationId: req.organizationId
+        }
+      });
+
+      if (!video) {
+        res.status(404).json({ error: 'Video not found' });
+        return;
+      }
+
+      if (!video.thumbnailPath || !fs.existsSync(video.thumbnailPath)) {
+        res.status(404).json({ error: 'Thumbnail not found' });
+        return;
+      }
+
+      res.setHeader('Content-Type', 'image/jpeg');
+      res.sendFile(path.resolve(video.thumbnailPath));
+    } catch (error) {
+      console.error('Get thumbnail error:', error);
+      res.status(500).json({ error: 'Failed to get thumbnail' });
+    }
+  }
+
+  // Download video
+  static async downloadVideo(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.organizationId) {
+        res.status(401).json({ error: 'Organization not authenticated' });
+        return;
+      }
+
+      const { id } = req.params;
+
+      const video = await prisma.video.findFirst({
+        where: { 
+          id,
+          organizationId: req.organizationId
+        }
+      });
+
+      if (!video) {
+        res.status(404).json({ error: 'Video not found' });
+        return;
+      }
+
+      if (!fs.existsSync(video.filePath)) {
+        res.status(404).json({ error: 'Video file not found' });
+        return;
+      }
+
+      res.setHeader('Content-Disposition', `attachment; filename="${video.originalFilename}"`);
+      res.setHeader('Content-Type', video.mimeType || 'video/mp4');
+      fs.createReadStream(video.filePath).pipe(res);
+    } catch (error) {
+      console.error('Download video error:', error);
+      res.status(500).json({ error: 'Failed to download video' });
     }
   }
 }
