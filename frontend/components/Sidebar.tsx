@@ -10,6 +10,7 @@ import {
   Users, 
   BarChart3, 
   Settings,
+  Shield,
   LogOut,
   Video,
   ChevronLeft,
@@ -34,6 +35,7 @@ export default function Sidebar() {
     { name: 'Pricing', href: '/pricing', icon: CreditCard },
     { name: 'Team', href: '/team', icon: Users },
     { name: 'Usage', href: '/usage', icon: BarChart3 },
+    { name: 'Audit Logs', href: '/audit-logs', icon: Shield },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
 
