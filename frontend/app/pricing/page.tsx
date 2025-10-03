@@ -33,11 +33,22 @@ export default function PricingPage() {
   const [currentPlan, setCurrentPlan] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [changingPlan, setChangingPlan] = useState<string | null>(null);
+  const [hasSubscription, setHasSubscription] = useState(false);
 
   useEffect(() => {
     fetchPlans();
     if (user) {
       fetchCurrentPlan();
+    }
+
+    // Check for success/cancel params
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success') === 'true') {
+      alert('Payment successful! Your plan has been updated.');
+      router.replace('/pricing');
+    } else if (params.get('canceled') === 'true') {
+      alert('Payment canceled. You can try again anytime.');
+      router.replace('/pricing');
     }
   }, [user]);
 
@@ -60,8 +71,22 @@ export default function PricingPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setCurrentPlan(response.data.currentPlan);
+      setHasSubscription(response.data.plan.price > 0);
     } catch (error) {
       console.error('Error fetching current plan:', error);
+    }
+  };
+
+  const handleManageBilling = async () => {
+    try {
+      const response = await axios.post(
+        `${API_URL}/api/billing/create-portal`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      window.location.href = response.data.url;
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Failed to open billing portal');
     }
   };
 
@@ -73,19 +98,35 @@ export default function PricingPage() {
 
     if (planId === currentPlan) return;
 
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return;
+
     setChangingPlan(planId);
     try {
-      await axios.post(
-        `${API_URL}/api/billing/change-plan`,
-        { newPlan: planId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      alert('Plan changed successfully!');
-      setCurrentPlan(planId);
+      // For paid plans, use Stripe checkout
+      if (plan.price > 0) {
+        const response = await axios.post(
+          `${API_URL}/api/billing/create-checkout`,
+          { planId },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        // Redirect to Stripe checkout
+        window.location.href = response.data.url;
+      } else {
+        // For free plan, downgrade directly
+        await axios.post(
+          `${API_URL}/api/billing/change-plan`,
+          { newPlan: planId },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        alert('Downgraded to Free plan successfully!');
+        setCurrentPlan(planId);
+        setChangingPlan(null);
+      }
     } catch (error: any) {
       alert(error.response?.data?.error || 'Failed to change plan');
-    } finally {
       setChangingPlan(null);
     }
   };
@@ -107,6 +148,16 @@ export default function PricingPage() {
         <p className="mt-4 text-xl text-gray-600">
           Choose the plan that's right for you
         </p>
+        {user && hasSubscription && (
+          <div className="mt-6">
+            <button
+              onClick={handleManageBilling}
+              className="inline-flex items-center px-6 py-3 border border-gray-300 shadow-sm text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              Manage Billing & Invoices
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">

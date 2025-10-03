@@ -8,13 +8,15 @@ datasource db {
 }
 
 model Organization {
-  id          String   @id @default(uuid())
-  name        String
-  email       String   @unique
-  plan        String   @default("free") // free, starter, pro, enterprise
-  status      String   @default("active") // active, suspended, cancelled
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id                  String   @id @default(uuid())
+  name                String
+  email               String   @unique
+  plan                String   @default("free") // free, starter, pro, enterprise
+  status              String   @default("active") // active, suspended, cancelled
+  stripeCustomerId    String?  @map("stripe_customer_id")
+  stripeSubscriptionId String? @map("stripe_subscription_id")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
   
   users       User[]
   apiKeys     ApiKey[]
