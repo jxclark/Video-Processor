@@ -3,7 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { LogOut, User, Key, LayoutDashboard, CreditCard, Settings } from 'lucide-react';
+import { LogOut, User, Key, LayoutDashboard, CreditCard, Settings, BarChart3 } from 'lucide-react';
 
 export default function Navigation() {
   const { user, organization, logout } = useAuth();
@@ -52,6 +52,28 @@ export default function Navigation() {
                 >
                   <CreditCard className="w-4 h-4" />
                   Pricing
+                </Link>
+                <Link
+                  href="/team"
+                  className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    pathname === '/team'
+                      ? 'bg-primary-100 text-primary-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <User className="w-4 h-4" />
+                  Team
+                </Link>
+                <Link
+                  href="/usage"
+                  className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    pathname === '/usage'
+                      ? 'bg-primary-100 text-primary-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  Usage
                 </Link>
                 <Link
                   href="/settings"
