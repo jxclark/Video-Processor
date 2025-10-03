@@ -13,7 +13,9 @@ interface User {
 interface Organization {
   id: string;
   name: string;
+  email?: string;
   plan: string;
+  status?: string;
 }
 
 interface AuthContextType {
