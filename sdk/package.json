@@ -1,0 +1,28 @@
+{
+  "name": "@video-processor/sdk",
+  "version": "1.0.0",
+  "description": "Official Node.js SDK for Video Processor API",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "video",
+    "processing",
+    "transcoding",
+    "api",
+    "sdk"
+  ],
+  "author": "Video Processor",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "form-data": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
