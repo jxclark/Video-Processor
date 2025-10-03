@@ -9,6 +9,7 @@ import teamRoutes from './routes/team.routes';
 import billingRoutes from './routes/billing.routes';
 import videoRoutes from './routes/video.routes';
 import usageRoutes from './routes/usage.routes';
+import { organizationRateLimiter } from './middleware/rateLimiter';
 
 dotenv.config();
 
@@ -19,6 +20,9 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Global rate limiting (applies to all routes except health checks)
+app.use('/api', organizationRateLimiter);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
