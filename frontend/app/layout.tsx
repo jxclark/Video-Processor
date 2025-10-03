@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
-import Navigation from '@/components/Navigation'
+import Sidebar from '@/components/Sidebar'
+import PageContainer from '@/components/PageContainer'
 
 
 export const metadata: Metadata = {
@@ -18,10 +19,14 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen bg-gray-50">
         <AuthProvider>
-          <Navigation />
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {children}
-          </main>
+          <div className="flex h-screen overflow-hidden">
+            <Sidebar />
+            <main className="flex-1 overflow-y-auto bg-gray-50">
+              <PageContainer>
+                {children}
+              </PageContainer>
+            </main>
+          </div>
         </AuthProvider>
       </body>
     </html>
